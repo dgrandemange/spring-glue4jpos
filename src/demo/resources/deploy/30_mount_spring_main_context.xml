@@ -1,0 +1,11 @@
+<!-- 
+	This deployment configuration makes Q2 load the spring application context 
+	file 'cfg/spring/application-context.xml' and identifies it as 'sample-spring-ctx' 
+	in the NameRegistrar
+ -->
+<spring-context name="demo-springglue-ctx" class="org.jpos.jposext.springglue.Spring"
+	logger="Q2">
+	
+	<!-- property 'config' points to the XML Spring context file -->
+	<property name="config" value="cfg/spring/application-context.xml" />
+</spring-context>

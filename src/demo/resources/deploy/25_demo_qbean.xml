@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mount a demo qbean and register it as a 'demoqbean' entry in the NameRegistrar -->
+<qbean name="demoqbean" class="org.jpos.jposext.springglue.demo.DemoQBean"/>

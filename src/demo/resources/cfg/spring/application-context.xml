@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+	<!--
+		Spring context
+	-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans	http://www.springframework.org/schema/beans/spring-beans-2.5.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+    <!-- Property Place Holder Configurer -->
+    <!-- 
+    <bean id="propertyConfigurer"
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+            </list>
+        </property>
+    </bean>
+    -->
+
+	<!-- 
+		We declared here a first sample map. 
+		We will further inject it into the participant 
+	-->
+	<bean id="aMap" class="java.util.HashMap">
+		<constructor-arg>
+			<map>
+				<entry key="spring-bean-bame" value="aMap"/>
+				<entry key="should-be-injected-in" value="the DemoParticipant participating to transaction manager 'mainTxMgr'"/>				
+			</map>
+		</constructor-arg>
+	</bean>
+
+	<!-- 
+		Then a second sample map. 
+		This one is will further be injected into the 'demoqbean' entry in the NameRegistrar 
+	-->
+	<bean id="anotherMap" class="java.util.HashMap">
+		<constructor-arg>
+			<map>
+				<entry key="spring-bean-bame" value="anotherMap"/>
+				<entry key="should-be-injected-in" value="the DemoQbean"/>				
+			</map>
+		</constructor-arg>
+	</bean>
+
+	<!-- We can export beans to the Q2 server mbean using mbean exporter facility natively provided by Spring -->
+
+    <!-- 
+		Find JMX mbean server named "Q2"		 
+	-->
+	<bean id="mBeanServer"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod"
+			value="org.jpos.jposext.springglue.JMXHelper.findFirstMBeanServerById" />
+		<property name="arguments">
+			<list>
+				<value>Q2</value>
+			</list>
+		</property>
+	</bean>
+
+	<!--
+		Export sample spring bean to Q2 mbean server  
+	-->
+	<bean id="mBeanExporter" class="org.springframework.jmx.export.MBeanExporter">
+		<property name="server" ref="mBeanServer" />
+		<property name="beans">
+			<map>			
+ 				<entry key="Q2:node=springBean,name=aMap" value-ref="aMap" />
+ 				<entry key="Q2:node=springBean,name=anotherMap" value-ref="anotherMap" />
+			</map>
+		</property>
+	</bean>
+    
+</beans>

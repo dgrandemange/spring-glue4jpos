@@ -1,0 +1,19 @@
+<!-- 
+	This deployment configuration makes Q2 load the spring application context 
+	file 'cfg/spring/app-ctx-nameregistrar.xml' and identifies it as 'spring-q2-nameregistrar-glue-ctx' 
+	in the NameRegistrar.	
+ -->
+<spring-context name="spring-q2-nameregistrar-glue-ctx" class="org.jpos.jposext.springglue.Spring" logger="Q2">
+
+	<!-- 
+		Property 'requiredRegisteredSpringContext' must reference a Spring context previously registered by the jPos NameRegistrar
+		(See deployment config 30_spring_main_ctx.xml) 
+	-->
+	<property name="requiredRegisteredSpringContext" value="demo-springglue-ctx" />
+
+	<!-- 
+		Property 'config' points to the XML Spring context file dedicated to the NameRegistrar dependency injection
+	-->
+	<property name="config" value="cfg/spring/app-ctx-nameregistrar.xml" />
+		
+</spring-context>
