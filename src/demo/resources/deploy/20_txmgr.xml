@@ -6,5 +6,7 @@
 	<property name="sessions" value="1" />
 
 	<participant class="org.jpos.jposext.springglue.demo.transaction.DemoParticipant"/>
+	
+	<participant class="org.jpos.jposext.springglue.demo.transaction.AnotherDemoParticipant"/>
 		
 </txnmgr>

@@ -97,13 +97,16 @@ public class TxnMgrParticipantsSpringGlue implements BeanFactoryPostProcessor,
 
 					String participantBeanId = beanDefsByParticipantClassName
 							.get(currentParticipantClassName);
-					if (factory.containsBean(participantBeanId)) {
-						factory.applyBeanPropertyValues(participant,
-								participantBeanId);
-						logger.debug(String
-								.format("Dependencies injected for participant of class '%s' (transaction manager '%s')",
-										currentParticipantClassName,
-										txnmgrRegistrationName));
+
+					if (null != participantBeanId) {
+						if (factory.containsBean(participantBeanId)) {
+							factory.applyBeanPropertyValues(participant,
+									participantBeanId);
+							logger.debug(String
+									.format("Dependencies injected for participant of class '%s' (transaction manager '%s')",
+											currentParticipantClassName,
+											txnmgrRegistrationName));
+						}
 					}
 				}
 			}
