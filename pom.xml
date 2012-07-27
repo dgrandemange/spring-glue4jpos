@@ -11,9 +11,9 @@
 	<url>http://maven.apache.org</url>
 
 	<scm>
-		<developerConnection>scm:git:ssh://git@github.com:dgrandemange/spring-glue4jpos.git</developerConnection>
-		<connection>scm:git:ssh://git@github.com:dgrandemange/spring-glue4jpos.git</connection>
-		<url>scm:git:ssh://git@github.com:dgrandemange/spring-glue4jpos.git</url>
+		<developerConnection>scm:git:ssh://git@github.com/dgrandemange/spring-glue4jpos.git</developerConnection>
+		<connection>scm:git:ssh://git@github.com/dgrandemange/spring-glue4jpos.git</connection>
+		<url>scm:git:ssh://git@github.com/dgrandemange/spring-glue4jpos.git</url>
 	</scm>
 
 	<distributionManagement>
