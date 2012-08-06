@@ -1,0 +1,198 @@
+=Introduction=
+==About jPos Q2==
+<p>JPos (Java Point of Sale) is a framework providing a set of components dedicated to the processing of financial transaction messages based on ISO-8583 protocol. (see official website [http://www.jpos.org]).</p>
+<p>JPos provides a Q2 container that is an ecosystem in which the components may be used. Q2 is responsible of the components instantiation based on deployment configuration files.</p>
+<p>For instance, a Q2 based application could initiate a server (QServer) serving request on a dedicated port through a dedicated channel (ISOChannel). It may then delegates to a listener (ISORequestListener) which in turn could delegate the processing of the message to a transaction manager (TransactionManager) and his registered participants (TransactionParticipant). The message should then be submitted to all participants to be committed. (Note that in order to make these components with each other, Q2 provides some shared communication spaces.)</p>
+
+==Spring in the Q2 ecosystem : what for ?==
+<p>Q2 is an ecosystem. So it is self sufficient. It knows how to instantiate the components of the system based on configuration files, how to tight them, how to make them communicate and other things ... 
+Moreover, the JPos EE project provides further optional modules that address various concerns such as database access through Hibernate …</p>
+
+<p>If we take a look to a typical architecture of a Q2 application (Qserver -> ISORequestListener -> TransactionManager -> TransactionParticipant), we may notice that the most specific code let to the developers is set in the participants objects.</p>
+
+<p>The idea here is to use Spring power to the Q2 boundary objects, such as the participants objects as seen above.</p>
+
+
+=Getting started with Spring glue=
+Spring glue is mainly :
+* one QBean,
+* two BeanFactoryPostProcessors : 
+** one dedicated to transaction participants injection,
+** another dedicated to jPos NameRegistrar's entries injection
+
+== Getting Q2 mount a Spring application context == 
+The Spring QBean mounts a Spring context (i.e. service layer, persistency layer, ...). 
+To get Q2 mount a Spring application context, you'll need : 
+# one Spring application context (i.e. ''application-context.xml'') : placing it under ''/cfg/spring/'' seems a good choice,
+# a dedicated Spring glue QBean deployment configuration (i.e. ''/deploy/30_mount_spring_main_context.xml'') referencing the Spring application context above
+
+<u>File ''/deploy/30_mount_spring_main_context.xml'' :</u>
+<pre>
+<!-- 
+	This deployment configuration makes Q2 load the spring application context 
+	file 'cfg/spring/application-context.xml' and identifies it as 'sample-spring-ctx' 
+	in the NameRegistrar
+ -->
+<spring-context name="demo-springglue-ctx" class="org.jpos.jposext.springglue.Spring"
+	logger="Q2">
+	
+	<!-- property 'config' points to the XML Spring context file -->
+	<property name="config" value="cfg/spring/application-context.xml" />
+</spring-context>
+</pre>
+
+Note the property <code>config</code> should point to the spring application context configuration file.
+Also note the name given to this QBean instance <code>demo-springglue-ctx</code> for it will be further referenced.
+
+== Now what ? ==
+Now that the Spring application is mounted, it can be further referenced to inject Q2 components. 
+
+===Injecting Spring beans in transaction participants===
+To inject participants, you will first need to identify the transaction manager you are working with.
+
+You'll need :
+# a Spring application context ''app-ctx-participants.xml'', that declares all your transaction participants and their dependency injections,
+# a dedicated Spring glue QBean deployment configuration ''deploy/40_participants_spring_injection.xml'' referencing the Spring application context above
+
+<u>File ''/deploy/40_participants_spring_injection.xml'' :</u>
+<pre>
+<!-- 
+	This deployment configuration makes Q2 load the spring application context 
+	file 'cfg/spring/app-ctx-participants.xml' and identifies it as 'spring-q2-participants-glue-ctx' 
+	in the NameRegistrar.	
+ -->
+<spring-context name="spring-q2-participants-glue-ctx" class="org.jpos.jposext.springglue.Spring" logger="Q2">
+
+	<!-- 
+		Property 'requiredRegisteredSpringContext' must reference a Spring context previously registered by the jPos NameRegistrar
+		(See deployment config 30_spring_main_ctx.xml) 
+	-->
+	<property name="requiredRegisteredSpringContext" value="demo-springglue-ctx" />
+	
+	<!-- 
+		Property 'config' points to the XML Spring context file dedicated to the dependency injection of some transaction participants
+	-->	
+	<property name="config" value="cfg/spring/app-ctx-participants.xml" />
+	
+</spring-context>
+</pre>
+
+It looks very similar to ''deploy/30_mount_spring_main_context.xml'', except that a property ''requiredRegisteredSpringContext'' indicates it requires a previously registered ''demo-springglue-ctx'' qbean (and its underlying Spring application context).
+The property <code>config</code> should point to the Spring application context <code>app-ctx-participants.xml</code>.
+
+Now, let's say you have a transaction manager identified by <code>myTxMgr</code>.
+<u>File ''deploy/20_txmgr.xml'' :</u>
+<pre>
+<txnmgr name="myTxMgr" logger="Q2" class="org.jpos.transaction.TransactionManager">
+
+	<property name="space" value="tspace:default" />
+	<property name="queue" value="myTxQueue" />
+	<property name="persistent-space" value="tspace:myTxnSpace" />
+	<property name="sessions" value="1" />
+
+	<participant class="org.jpos.jposext.springglue.demo.transaction.DemoParticipant"/>
+	
+	<participant class="org.jpos.jposext.springglue.demo.transaction.AnotherDemoParticipant"/>
+		
+</txnmgr>
+</pre>  
+
+Your Spring application context dedicated to participants injection must declare which transaction manager to work with. This is done in Spring factory post processor <code>org.jpos.transaction.TxnMgrParticipantsSpringGlue</code> declaration with property <code>txnmgrRegistrationName</code>. Also note the <code>processingDelay</code> that specifies how long the Spring bean factory post processor should wait for the transaction manager <code>myTxMgr</code> to be mounted by Q2.
+
+<u>File ''cfg/spring/app-ctx-participants.xml'' :</u>
+<pre>
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<!-- Mandatory Spring post-processor declaration dedicated to jPos transaction 
+		participants injection -->
+	<bean id="jposParticipantsInjector" class="org.jpos.transaction.TxnMgrParticipantsSpringGlue">
+
+		<!-- Specify the parent transaction manager instance name as registered 
+			in the jPos NameRegistrar -->
+		<property name="txnmgrRegistrationName" value="myTxMgr" />
+
+		<!-- Max delay (in millisesonds) allowed to injection processing -->
+		<property name="processingDelay" value="30000" />
+	</bean>
+
+	<bean class="org.jpos.jposext.springglue.demo.transaction.DemoParticipant"
+		lazy-init="true">
+		<property name="map" ref="aMap" />
+	</bean>
+
+</beans>
+</pre>
+
+Here, we inject any instance of <code>org.jpos.jposext.springglue.demo.transaction.DemoParticipant</code>. Property <code>map</code> will be injected with a spring bean named <code>aMap</code> declared in main Spring application context ''/cfg/spring/application-context.xml''.
+There's no need to precise a bean id here. By the way, transaction participants are not registered in the Spring factory at all as their life cycle is managed by Q2. It's non sense trying to reference them by some extra Spring configuration. 
+
+===Injecting Spring beans in jPos NameRegistrar entries===
+This part is quite similar to transaction participants injection.
+Let's take a look at its dedicated Spring application context which is slightly different.
+
+<u>File ''cfg/spring/app-ctx-nameregistrar.xml'' :</u>
+<pre>
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<!-- Mandatory Spring post-processor declaration dedicated to jPos NameRegistrar 
+		entries injection -->
+	<bean id="jposNameRegistrarInjector"
+		class="org.jpos.jposext.springglue.NameRegistrarObjectsSpringGlue">
+		<!-- Max delay (in millisesonds) allowed to injection processing -->
+		<property name="processingDelay" value="30000" />
+	</bean>
+
+
+	<bean id="NameRegistrar.demoqbean" class="org.jpos.jposext.springglue.demo.DemoQBean"
+		lazy-init="true">
+		<property name="map" ref="anotherMap" />
+	</bean>
+
+
+</beans>
+</pre>
+
+Note that the Spring bean factory post processor to use is <code>org.jpos.jposext.springglue.NameRegistrarObjectsSpringGlue</code>. Only a <code>processingDelay</code> that specifies how long this Spring bean factory post processor should wait for target entries be registered in Q2 NameRegistrar.
+
+Also note the way we specifiy which entry(ies) to dependency inject : any bean with an id beginning with ''NameRegistrar.'' will be identified as a NameRegistrar entry to inject. The next part behind ''NameRegistrar.'' will be used as the key to look for in the NameRegistrar entries.
+
+=Some things you may be interested with=
+==Redeployment and Q2 services interdependencies==
+Q2 doesn’t natively provides the management of interdependencies between the several services that compose its ecosystem. Only the initial starting sequence introduce such a notion, but it’s not useful in a redeployment phase. Thus, the interdependencies between the various deployment configurations of our solution must be managed manually (and carefully).
+
+==Spring integration in a jPos Maven multi module project==
+Let's say you have a Maven multi module project, and as you may in/ex-clude some of them depending on your Maven profiles, you don't want one solely Spring configuration in your main module, which would break the module idiom. You'd rather have each module manage its own Spring thing, wouldn't you ?
+Well, here is some strategy :
+# declare an extra ''root-application-context.xml'' in you main module like this :
+<pre>
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Root Spring context -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"	
+	xsi:schemaLocation="http://www.springframework.org/schema/beans	http://www.springframework.org/schema/beans/spring-beans-2.5.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+	<!-- Import all availables /cfg/spring/application-context*.xml in classpath -->
+	<import resource="classpath:/cfg/spring/application-context*.xml" />
+
+</beans>
+</pre>
+
+In your deployment configuration ''/deploy/30_mount_spring_main_context.xml'', don't forget to replace 
+<pre><property name="config" value="cfg/spring/application-context.xml" /></pre>
+by
+<pre><property name="config" value="cfg/spring/root-application-context.xml" /></pre>
+
+Using wildcard <code>*</code>, we tell Spring to import all resources named ''application-context*.xml'' and under classpath ''/cfg/spring/''. Each module should now declare its own main Spring context file with name beginning with ''application-context'', it will be automatically imported by the root application context. Note : modules main application contexts should have distinct names. Consider using module's name as a suffix.(i.e. ''application-context__mod-pci-facility.xml'').
+
+Also note : working with Spring PropertyPlaceHolder's, you may face some trouble working with resource imports. Consider then looking at this great post [http://tarlogonjava.blogspot.fr/2009/02/tips-regarding-springs.html].
+
+== Spring DI of AspectJ aspects weaving jPos components at load time==
+Works fine.
