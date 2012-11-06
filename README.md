@@ -23,10 +23,10 @@ Simply add the following snippet to your pom.xml's dependencies section :
     
         <!-- ... your project dependencies -->
     
-    		<dependency>
-        	<groupId>org.jpos.jposext</groupId>
-        	<artifactId>springglue</artifactId>
-        	<version>1.0.1</version>
+        <dependency>
+            <groupId>org.jpos.jposext</groupId>
+            <artifactId>springglue</artifactId>
+            <version>1.0.1</version>
         </dependency>        
     </dependencies>
 
