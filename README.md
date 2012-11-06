@@ -30,8 +30,8 @@ Simply add the following snippet to your pom.xml's dependencies section :
         </dependency>        
     </dependencies>
 
-Running the demo :
------------------- 
+Running the project demo :
+--------------------------
 First, 'mvn -Pdemo install'
 Then, under runtime directory 'java -jar q2.jar'
 
