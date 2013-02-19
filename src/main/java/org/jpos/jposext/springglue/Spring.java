@@ -24,7 +24,8 @@ public class Spring extends QBeanSupport implements SpringMBean {
 
 	ApplicationContext context;
 	String[] configFiles;
-	String requiredSpringCtxRegistrationKey;
+	String springCtxDepRegistrationKey;
+	boolean springCtxDepOptional;
 	Properties springProperties;
 
 	/*
@@ -37,9 +38,16 @@ public class Spring extends QBeanSupport implements SpringMBean {
 		if (configFiles.length < 1)
 			throw new ConfigurationException("config property not specified");
 
-		requiredSpringCtxRegistrationKey = cfg
+		springCtxDepOptional = false;
+		springCtxDepRegistrationKey = cfg
 				.get("requiredRegisteredSpringContext");
-
+		
+		if (null == springCtxDepRegistrationKey) {
+			springCtxDepRegistrationKey = cfg
+					.get("optionalRegisteredSpringContext");
+			springCtxDepOptional = true;			
+		}
+		
 		springProperties = new Properties();
 		@SuppressWarnings("rawtypes")
 		Iterator iter = getPersist().getChildren("spring-property").iterator();
@@ -69,22 +77,41 @@ public class Spring extends QBeanSupport implements SpringMBean {
 	public void startService() {
 		ApplicationContext dependencyCtx = null;
 
-		if ((null != requiredSpringCtxRegistrationKey)
-				&& (requiredSpringCtxRegistrationKey.trim().length() > 0)) {
+		if ((null != springCtxDepRegistrationKey)
+				&& (springCtxDepRegistrationKey.trim().length() > 0)) {
 			try {
 				log.debug(String
 						.format("Spring Q2MBean '%s' : search for Spring context dependency '%s' in NameRegistrar",
-								getName(), requiredSpringCtxRegistrationKey));
-				dependencyCtx = ((Spring) NameRegistrar
-						.get(requiredSpringCtxRegistrationKey)).getContext();
+								getName(), springCtxDepRegistrationKey));
+
+				Object object = NameRegistrar
+						.get(springCtxDepRegistrationKey);
+				if (object instanceof Spring) {
+					dependencyCtx = ((Spring) object).getContext();
+				} else if (object instanceof ApplicationContext) {
+					dependencyCtx = ((ApplicationContext) object);
+				} else {
+					String errMsg = String
+							.format("Spring Q2MBean '%s' : spring context dependency '%s' found in NameRegistrar but is not a Spring ApplicaitonContext, neither a Spring QBean",
+									getName(), springCtxDepRegistrationKey);
+					log.error(errMsg);
+					throw new RuntimeException(errMsg);
+				}
+
 				log.debug(String
 						.format("Spring Q2MBean '%s' : Spring context dependency '%s' found in NameRegistrar",
-								getName(), requiredSpringCtxRegistrationKey));
+								getName(), springCtxDepRegistrationKey));
 			} catch (NotFoundException e) {
-				log.error(String
-						.format("Spring Q2MBean '%s' : spring context dependency '%s' not found in NameRegistrar",
-								getName(), requiredSpringCtxRegistrationKey));
-				throw new RuntimeException(e);
+				if (!this.springCtxDepOptional) {
+					log.error(String
+							.format("Spring Q2MBean '%s' : spring context dependency '%s' not found in NameRegistrar",
+									getName(), springCtxDepRegistrationKey));
+					throw new RuntimeException(e);
+				} else {
+					log.info(String
+							.format("Spring Q2MBean '%s' : optional spring context dependency '%s' not found in NameRegistrar",
+									getName(), springCtxDepRegistrationKey));					
+				}
 			}
 		}
 
@@ -138,13 +165,34 @@ public class Spring extends QBeanSupport implements SpringMBean {
 		this.configFiles = configs;
 	}
 
-	public String getRequiredSpringCtxRegistrationKey() {
-		return requiredSpringCtxRegistrationKey;
+	/**
+	 * @return the springCtxDepRegistrationKey
+	 */
+	public String getSpringCtxDepRegistrationKey() {
+		return springCtxDepRegistrationKey;
 	}
 
-	public void setRequiredSpringCtxRegistrationKey(
-			String requiredSpringCtxRegistrationKey) {
-		this.requiredSpringCtxRegistrationKey = requiredSpringCtxRegistrationKey;
+	/**
+	 * @param springCtxDepRegistrationKey the springCtxDepRegistrationKey to set
+	 */
+	public void setSpringCtxDepRegistrationKey(String springCtxDepRegistrationKey) {
+		this.springCtxDepRegistrationKey = springCtxDepRegistrationKey;
 	}
+
+	/**
+	 * @return the springCtxDepOptional
+	 */
+	public boolean isSpringCtxDepOptional() {
+		return springCtxDepOptional;
+	}
+
+	/**
+	 * @param springCtxDepOptional the springCtxDepOptional to set
+	 */
+	public void setSpringCtxDepOptional(boolean springCtxDepOptional) {
+		this.springCtxDepOptional = springCtxDepOptional;
+	}
+
+
 
 }

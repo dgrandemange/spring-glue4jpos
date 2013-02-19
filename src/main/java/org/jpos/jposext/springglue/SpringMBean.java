@@ -10,5 +10,7 @@ public interface SpringMBean extends org.jpos.q2.QBeanSupportMBean {
 
     public String[] getConfig();
     
-    public void setConfig(String[] configs);
+	public String getSpringCtxDepRegistrationKey();
+
+	public boolean isSpringCtxDepOptional();
 }
