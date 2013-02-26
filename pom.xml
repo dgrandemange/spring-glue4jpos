@@ -3,7 +3,7 @@
 
 	<groupId>org.jpos.jposext</groupId>
 	<artifactId>springglue</artifactId>
-	<version>1.0.2-SNAPSHOT</version>
+	<version>1.0.2</version>
 	<packaging>jar</packaging>
 
 	<name>springglue</name>
